@@ -18,45 +18,21 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: 📦 yt-dlp kurulumu (en son sürüm)
+    - name: 📦 Node.js kurulumu (JavaScript runtime için)
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: 📦 yt-dlp ve bağımlılıkları kur
       run: |
         pip install --upgrade pip
         pip install --upgrade yt-dlp
+        npm install -g jsdom
         
-    - name: 🔧 yt-dlp test
+    - name: 🎬 Akış bağlantısını al (Node.js ile)
       run: |
-        yt-dlp --version
+        node get_stream.js
         
-    - name: 🎬 Akış bağlantısını güncelle
+    - name: 🔄 Python ile M3U oluştur
       run: |
-        python update_stream.py
-      continue-on-error: false
-      
-    - name: 📝 Değişiklikleri kontrol et
-      id: check_changes
-      run: |
-        git config --global user.email "action@github.com"
-        git config --global user.name "GitHub Action"
-        
-        git status --porcelain
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "changes=true" >> $GITHUB_OUTPUT
-          echo "📊 Değişen dosyalar:"
-          git status --porcelain
-        else
-          echo "changes=false" >> $GITHUB_OUTPUT
-          echo "ℹ️ URL değişmemiş veya hata oluştu"
-        fi
-        
-    - name: 📤 Değişiklikleri GitHub'a gönder
-      if: steps.check_changes.outputs.changes == 'true'
-      run: |
-        git add cache/ stream_url.txt beinsports_haber.m3u || true
-        git add *.old --ignore-errors || true
-        
-        if [[ -n $(git status --porcelain) ]]; then
-          git commit -m "🔄 beIN Sports Haber güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
-          git push
-        else
-          echo "Commit edilecek değişiklik yok"
-        fi
+        python create_m3u.py
