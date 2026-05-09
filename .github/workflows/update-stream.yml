@@ -23,38 +23,54 @@ jobs:
         pip install --upgrade pip
         pip install --upgrade yt-dlp
         
-    - name: 🍪 Cookies'i decode et ve doğrula
+    - name: 🍪 Cookies'i decode et
       run: |
-        # Secret'ı decode et
         echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
+        echo "✅ Cookies yüklendi"
         
-        # Formatı kontrol et
-        head -3 cookies.txt
-        if ! grep -q "Netscape HTTP Cookie File" cookies.txt; then
-          echo "❌ Cookies dosyası Netscape formatında değil!"
-          exit 1
-        fi
-        echo "✅ Cookies formatı doğru"
-        
-    - name: 🎬 Stream URL al
+    - name: 🎬 Stream URL al (web client ile)
       run: |
+        # Önce web client dene (cookies destekler)
         yt-dlp -g \
           --cookies cookies.txt \
-          --extractor-args "youtube:player_client=android" \
+          --extractor-args "youtube:player_client=web" \
           -f "best[height<=1080]" \
-          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
+          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt || true
+          
+        # Eğer boşsa, farklı client dene
+        if [ ! -s stream_url.txt ]; then
+          echo "Web client başarısız, chrome client deneniyor..."
+          yt-dlp -g \
+            --cookies cookies.txt \
+            --extractor-args "youtube:player_client=chrome" \
+            -f "best[height<=1080]" \
+            https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt || true
+        fi
         
-        echo "✅ Stream URL alındı"
+        # Hala boşsa, cookies'siz dene
+        if [ ! -s stream_url.txt ]; then
+          echo "Cookies'siz deneniyor..."
+          yt-dlp -g \
+            --extractor-args "youtube:player_client=android" \
+            -f "best[height<=720]" \
+            https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt || true
+        fi
         
     - name: 📝 M3U oluştur
       run: |
-        STREAM_URL=$(cat stream_url.txt)
-        
-        cat > beinsports_haber.m3u << EOF
-        #EXTM3U
-        #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
-        $STREAM_URL
-        EOF
+        if [ -s stream_url.txt ]; then
+          STREAM_URL=$(cat stream_url.txt)
+          echo "✅ Stream URL alındı: ${STREAM_URL:0:100}..."
+          
+          cat > beinsports_haber.m3u << EOF
+          #EXTM3U
+          #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
+          $STREAM_URL
+          EOF
+        else
+          echo "❌ Stream URL alınamadı, eski dosya korunuyor"
+          exit 1
+        fi
         
     - name: 📤 GitHub'a gönder
       run: |
