@@ -18,18 +18,26 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: 📦 Gereksinimleri yükle
+    - name: 📦 yt-dlp kurulumu (en son sürüm)
       run: |
         pip install --upgrade pip
-        pip install yt-dlp
+        pip install --upgrade yt-dlp
         
-    - name: 🎬 Cache temizle ve yeni manifest oluştur
+    - name: 🔧 yt-dlp test
+      run: |
+        yt-dlp --version
+        
+    - name: 🎬 Akış bağlantısını güncelle
       run: |
         python update_stream.py
-        
+      continue-on-error: false
+      
     - name: 📝 Değişiklikleri kontrol et
       id: check_changes
       run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        
         git status --porcelain
         if [[ -n $(git status --porcelain) ]]; then
           echo "changes=true" >> $GITHUB_OUTPUT
@@ -37,19 +45,18 @@ jobs:
           git status --porcelain
         else
           echo "changes=false" >> $GITHUB_OUTPUT
-          echo "ℹ️ URL değişmemiş, güncelleme yapılmadı"
+          echo "ℹ️ URL değişmemiş veya hata oluştu"
         fi
         
     - name: 📤 Değişiklikleri GitHub'a gönder
       if: steps.check_changes.outputs.changes == 'true'
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
+        git add cache/ stream_url.txt beinsports_haber.m3u || true
+        git add *.old --ignore-errors || true
         
-        # Eski yedek dosyaları temizle (opsiyonel)
-        git add cache/
-        git add stream_url.txt beinsports_haber.m3u
-        git add *.old --ignore-errors
-        
-        git commit -m "🔄 beIN Sports Haber güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
-        git push
+        if [[ -n $(git status --porcelain) ]]; then
+          git commit -m "🔄 beIN Sports Haber güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
+        else
+          echo "Commit edilecek değişiklik yok"
+        fi
