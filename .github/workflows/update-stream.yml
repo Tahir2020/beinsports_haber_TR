@@ -23,7 +23,7 @@ jobs:
         pip install --upgrade pip
         pip install yt-dlp
         
-    - name: 🎬 Akış bağlantısını ve M3U dosyasını güncelle
+    - name: 🎬 Cache temizle ve yeni manifest oluştur
       run: |
         python update_stream.py
         
@@ -33,8 +33,11 @@ jobs:
         git status --porcelain
         if [[ -n $(git status --porcelain) ]]; then
           echo "changes=true" >> $GITHUB_OUTPUT
+          echo "📊 Değişen dosyalar:"
+          git status --porcelain
         else
           echo "changes=false" >> $GITHUB_OUTPUT
+          echo "ℹ️ URL değişmemiş, güncelleme yapılmadı"
         fi
         
     - name: 📤 Değişiklikleri GitHub'a gönder
@@ -42,6 +45,11 @@ jobs:
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
+        
+        # Eski yedek dosyaları temizle (opsiyonel)
+        git add cache/
         git add stream_url.txt beinsports_haber.m3u
+        git add *.old --ignore-errors
+        
         git commit -m "🔄 beIN Sports Haber güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
         git push
