@@ -1,4 +1,4 @@
-name: beIN Sports Haber - Canlı Yayın Güncelleme (Düzeltilmiş)
+name: beIN Sports Haber - Canlı Yayın Güncelleme
 
 on:
   schedule:
@@ -8,6 +8,7 @@ on:
 jobs:
   update-stream:
     runs-on: ubuntu-latest
+
     steps:
     - name: 📥 Kodu çek
       uses: actions/checkout@v4
@@ -17,61 +18,59 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: 📦 Deno (JavaScript Runtime) Kurulumu ve Doğrulama
-      uses: denoland/setup-deno@v1
+    - name: 📦 Deno Kurulumu
+      uses: denoland/setup-deno@v2
       with:
-        deno-version: v1.x
+        deno-version: latest
 
-    - name: 🔧 Deno'nun PATH'te Olduğunu Doğrula
+    - name: 📦 yt-dlp Kur
       run: |
-        which deno
+        python -m pip install --upgrade pip
+        python -m pip install --upgrade yt-dlp
+
+    - name: 🔧 Kontrol
+      run: |
+        yt-dlp --version
         deno --version
+        which deno
 
-    - name: 📦 yt-dlp ve Bağımlılıkları Kur
-      run: |
-        pip install --upgrade pip
-        pip install --upgrade yt-dlp
-        pip install yt-dlp-ejs
-
-    - name: 🔧 yt-dlp Yapılandırmasını Oluştur (EJS için)
-      run: |
-        mkdir -p ~/.config/yt-dlp
-        # Yapılandırma dosyasına runtime ve uzaktan bileşenleri ekle
-        echo "--js-runtimes deno" > ~/.config/yt-dlp/config
-        echo "--remote-components ejs:npm" >> ~/.config/yt-dlp/config
-        # Doğrulama için yapılandırmayı göster
-        cat ~/.config/yt-dlp/config
-
-    - name: 🍪 Cookies'i Çöz ve Doğrula
+    - name: 🍪 Cookies'i Çöz
       run: |
         echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
-        # Cookies dosyasının boş olmadığını doğrula
         if [ ! -s cookies.txt ]; then
-          echo "❌ cookies.txt dosyası boş!"
+          echo "❌ cookies.txt boş!"
           exit 1
         fi
-        echo "✅ Cookies yüklendi (durum: OK)"
+        echo "✅ Cookies yüklendi"
 
-    - name: 🎬 Stream URL Al (Doğrudan Deno Kullanmaya Zorla)
+    - name: 🎬 Stream URL Al
       run: |
-        # Yapılandırma dosyasının kullanıldığından emin olmak için --ignore-config kullanma
         yt-dlp -g \
           --cookies cookies.txt \
           --js-runtimes deno \
-          --remote-components ejs:npm \
-          -f "best[height<=1080]" \
-          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
+          --remote-components ejs:github \
+          --extractor-args "youtube:player_client=default" \
+          -f "best[height<=1080]/best" \
+          "https://www.youtube.com/watch?v=i7UpPgxfZZ8" > stream_url.txt
+
+        if [ ! -s stream_url.txt ]; then
+          echo "❌ stream_url.txt boş!"
+          exit 1
+        fi
+
         echo "✅ Stream URL alındı."
-        echo "URL: $(head -n 1 stream_url.txt | cut -c1-100)..."
+        echo "URL: $(head -n 1 stream_url.txt | cut -c1-120)..."
 
     - name: 📝 M3U Playlist Dosyasını Oluştur
       run: |
-        STREAM_URL=$(cat stream_url.txt)
+        STREAM_URL=$(head -n 1 stream_url.txt)
+
         cat > beinsports_haber.m3u <<EOF
         #EXTM3U
         #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
         $STREAM_URL
         EOF
+
         echo "✅ M3U dosyası oluşturuldu."
         cat beinsports_haber.m3u
 
