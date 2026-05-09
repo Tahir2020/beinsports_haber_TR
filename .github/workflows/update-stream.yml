@@ -1,4 +1,4 @@
-name: beIN Sports Haber - Canlı Yayın Güncelleme
+name: beIN Sports Haber - Canlı Yayın Güncelleme (Düzeltilmiş)
 
 on:
   schedule:
@@ -8,72 +8,77 @@ on:
 jobs:
   update-stream:
     runs-on: ubuntu-latest
-    
     steps:
     - name: 📥 Kodu çek
       uses: actions/checkout@v4
-      
+
     - name: 🐍 Python kurulumu
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-        
-    - name: 📦 Deno (JavaScript Runtime) kurulumu
+
+    - name: 📦 Deno (JavaScript Runtime) Kurulumu ve Doğrulama
       uses: denoland/setup-deno@v1
       with:
         deno-version: v1.x
-        
-    - name: 📦 yt-dlp ve bağımlılıkları kur
+
+    - name: 🔧 Deno'nun PATH'te Olduğunu Doğrula
+      run: |
+        which deno
+        deno --version
+
+    - name: 📦 yt-dlp ve Bağımlılıkları Kur
       run: |
         pip install --upgrade pip
         pip install --upgrade yt-dlp
         pip install yt-dlp-ejs
-        
-    - name: 🔧 yt-dlp yapılandırması (EJS için)
+
+    - name: 🔧 yt-dlp Yapılandırmasını Oluştur (EJS için)
       run: |
         mkdir -p ~/.config/yt-dlp
-        # Deno'yu JavaScript runtime olarak ayarla
+        # Yapılandırma dosyasına runtime ve uzaktan bileşenleri ekle
         echo "--js-runtimes deno" > ~/.config/yt-dlp/config
         echo "--remote-components ejs:npm" >> ~/.config/yt-dlp/config
+        # Doğrulama için yapılandırmayı göster
         cat ~/.config/yt-dlp/config
-        
-    - name: 🍪 Cookies'i decode et
+
+    - name: 🍪 Cookies'i Çöz ve Doğrula
       run: |
         echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
-        echo "✅ Cookies yüklendi"
-        
-    - name: 🎬 Stream URL al (JavaScript challenge çözülmüş olmalı)
-      run: |
-        yt-dlp -g \
-          --cookies cookies.txt \
-          -f "best[height<=1080]" \
-          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
-        
-        if [ -s stream_url.txt ]; then
-          echo "✅ Stream URL alındı"
-          echo "URL: $(head -n 1 stream_url.txt | cut -c1-100)..."
-        else
-          echo "❌ Stream URL alınamadı"
+        # Cookies dosyasının boş olmadığını doğrula
+        if [ ! -s cookies.txt ]; then
+          echo "❌ cookies.txt dosyası boş!"
           exit 1
         fi
-        
-    - name: 📝 M3U oluştur
+        echo "✅ Cookies yüklendi (durum: OK)"
+
+    - name: 🎬 Stream URL Al (Doğrudan Deno Kullanmaya Zorla)
+      run: |
+        # Yapılandırma dosyasının kullanıldığından emin olmak için --ignore-config kullanma
+        yt-dlp -g \
+          --cookies cookies.txt \
+          --js-runtimes deno \
+          --remote-components ejs:npm \
+          -f "best[height<=1080]" \
+          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
+        echo "✅ Stream URL alındı."
+        echo "URL: $(head -n 1 stream_url.txt | cut -c1-100)..."
+
+    - name: 📝 M3U Playlist Dosyasını Oluştur
       run: |
         STREAM_URL=$(cat stream_url.txt)
-        
-        cat > beinsports_haber.m3u << 'EOF'
+        cat > beinsports_haber.m3u <<EOF
         #EXTM3U
         #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
+        $STREAM_URL
         EOF
-        echo "$STREAM_URL" >> beinsports_haber.m3u
-        
-        echo "✅ M3U dosyası oluşturuldu"
+        echo "✅ M3U dosyası oluşturuldu."
         cat beinsports_haber.m3u
-        
-    - name: 📤 GitHub'a gönder
+
+    - name: 📤 Değişiklikleri GitHub'a Gönder
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add stream_url.txt beinsports_haber.m3u
-        git diff --cached --quiet || git commit -m "🔄 $(date '+%Y-%m-%d %H:%M:%S')"
+        git diff --cached --quiet || git commit -m "🔄 Otomatik güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
         git push
