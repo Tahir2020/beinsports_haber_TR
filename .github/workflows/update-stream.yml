@@ -18,21 +18,38 @@ jobs:
       with:
         python-version: '3.11'
         
-    - name: 📦 Node.js kurulumu (JavaScript runtime için)
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        
-    - name: 📦 yt-dlp ve bağımlılıkları kur
+    - name: 📦 yt-dlp kurulumu
       run: |
         pip install --upgrade pip
         pip install --upgrade yt-dlp
-        npm install -g jsdom
         
-    - name: 🎬 Akış bağlantısını al (Node.js ile)
+    - name: 🍪 Cookies'i decode et
       run: |
-        node get_stream.js
+        echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
+        echo "✅ Cookies yüklendi"
         
-    - name: 🔄 Python ile M3U oluştur
+    - name: 🎬 Stream URL al
       run: |
-        python create_m3u.py
+        yt-dlp -g \
+          --cookies cookies.txt \
+          --extractor-args "youtube:player_client=android" \
+          -f "best[height<=1080][fps<=50]" \
+          https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
+          
+    - name: 📝 M3U oluştur
+      run: |
+        STREAM_URL=$(cat stream_url.txt)
+        
+        cat > beinsports_haber.m3u << EOF
+        #EXTM3U
+        #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
+        $STREAM_URL
+        EOF
+        
+    - name: 📤 GitHub'a gönder
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add stream_url.txt beinsports_haber.m3u
+        git diff --cached --quiet || git commit -m "🔄 $(date '+%Y-%m-%d %H:%M:%S')"
+        git push
