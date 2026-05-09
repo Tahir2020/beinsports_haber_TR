@@ -5,79 +5,57 @@ on:
     - cron: '0 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   update-stream:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 📥 Kodu çek
-      uses: actions/checkout@v4
+      - name: 📥 Kodu çek
+        uses: actions/checkout@v4
 
-    - name: 🐍 Python kurulumu
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
+      - name: 🐍 Python kurulumu
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: 📦 Deno Kurulumu
-      uses: denoland/setup-deno@v2
-      with:
-        deno-version: latest
+      - name: 📦 Deno kurulumu
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: latest
 
-    - name: 📦 yt-dlp Kur
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install --upgrade yt-dlp
+      - name: 📦 yt-dlp kur
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --upgrade yt-dlp
 
-    - name: 🔧 Kontrol
-      run: |
-        yt-dlp --version
-        deno --version
-        which deno
+      - name: 🔧 Sürümleri kontrol et
+        run: |
+          yt-dlp --version
+          deno --version
+          which deno
 
-    - name: 🍪 Cookies'i Çöz
-      run: |
-        echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
-        if [ ! -s cookies.txt ]; then
-          echo "❌ cookies.txt boş!"
-          exit 1
-        fi
-        echo "✅ Cookies yüklendi"
+      - name: 🍪 Cookies'i çöz
+        run: |
+          echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
+          if [ ! -s cookies.txt ]; then
+            echo "❌ cookies.txt boş!"
+            exit 1
+          fi
+          echo "✅ Cookies yüklendi"
 
-    - name: 🎬 Stream URL Al
-      run: |
-        yt-dlp -g \
-          --cookies cookies.txt \
-          --js-runtimes deno \
-          --remote-components ejs:github \
-          --extractor-args "youtube:player_client=default" \
-          -f "best[height<=1080]/best" \
-          "https://www.youtube.com/watch?v=i7UpPgxfZZ8" > stream_url.txt
+      - name: 🎬 Stream URL ve M3U oluştur
+        run: |
+          python update_stream.py
 
-        if [ ! -s stream_url.txt ]; then
-          echo "❌ stream_url.txt boş!"
-          exit 1
-        fi
+      - name: 📤 Değişiklikleri GitHub'a gönder
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
 
-        echo "✅ Stream URL alındı."
-        echo "URL: $(head -n 1 stream_url.txt | cut -c1-120)..."
+          git add stream_url.txt Bein_Sports_Haberler.m3u cache || true
 
-    - name: 📝 M3U Playlist Dosyasını Oluştur
-      run: |
-        STREAM_URL=$(head -n 1 stream_url.txt)
-
-        cat > beinsports_haber.m3u <<EOF
-        #EXTM3U
-        #EXTINF:-1 tvg-id="beinsports.tr" tvg-name="beIN Sports Haber" tvg-logo="https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png" group-title="Bein Sports Haber",beIN Sports Haber
-        $STREAM_URL
-        EOF
-
-        echo "✅ M3U dosyası oluşturuldu."
-        cat beinsports_haber.m3u
-
-    - name: 📤 Değişiklikleri GitHub'a Gönder
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add stream_url.txt beinsports_haber.m3u
-        git diff --cached --quiet || git commit -m "🔄 Otomatik güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
-        git push
+          git diff --cached --quiet || git commit -m "🔄 Otomatik güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
+          git push
