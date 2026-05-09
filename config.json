@@ -1,0 +1,9 @@
+{
+    "youtube_url": "https://www.youtube.com/embed/i7UpPgxfZZ8",
+    "quality": "best[height<=1080][fps<=50]",
+    "output_file": "stream_url.txt",
+    "m3u_file": "beinsports_haber.m3u",
+    "channel_name": "beIN Sports Haber",
+    "channel_logo": "https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png",
+    "group_title": "Bein Sports Haber"
+}
