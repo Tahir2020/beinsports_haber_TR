@@ -23,19 +23,29 @@ jobs:
         pip install --upgrade pip
         pip install --upgrade yt-dlp
         
-    - name: 🍪 Cookies'i decode et
+    - name: 🍪 Cookies'i decode et ve doğrula
       run: |
+        # Secret'ı decode et
         echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
-        echo "✅ Cookies yüklendi"
+        
+        # Formatı kontrol et
+        head -3 cookies.txt
+        if ! grep -q "Netscape HTTP Cookie File" cookies.txt; then
+          echo "❌ Cookies dosyası Netscape formatında değil!"
+          exit 1
+        fi
+        echo "✅ Cookies formatı doğru"
         
     - name: 🎬 Stream URL al
       run: |
         yt-dlp -g \
           --cookies cookies.txt \
           --extractor-args "youtube:player_client=android" \
-          -f "best[height<=1080][fps<=50]" \
+          -f "best[height<=1080]" \
           https://www.youtube.com/embed/i7UpPgxfZZ8 > stream_url.txt
-          
+        
+        echo "✅ Stream URL alındı"
+        
     - name: 📝 M3U oluştur
       run: |
         STREAM_URL=$(cat stream_url.txt)
