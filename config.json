@@ -5,5 +5,8 @@
     "m3u_file": "beinsports_haber.m3u",
     "channel_name": "beIN Sports Haber",
     "channel_logo": "https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png",
-    "group_title": "Bein Sports Haber"
+    "group_title": "Bein Sports Haber",
+    "cache_dir": "cache",
+    "keep_old_urls": false,
+    "max_cache_age_hours": 1
 }
