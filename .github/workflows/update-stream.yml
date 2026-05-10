@@ -40,22 +40,36 @@ jobs:
       - name: 🍪 Cookies'i çöz
         run: |
           echo "${{ secrets.YOUTUBE_COOKIES }}" | base64 -d > cookies.txt
+
           if [ ! -s cookies.txt ]; then
             echo "❌ cookies.txt boş!"
             exit 1
           fi
+
           echo "✅ Cookies yüklendi"
 
-      - name: 🎬 Stream URL ve M3U oluştur
+      - name: 🎬 M3U oluştur
         run: |
           python update_stream.py
 
-      - name: 📤 Değişiklikleri GitHub'a gönder
+      - name: ✅ M3U kontrol et
+        run: |
+          if [ ! -s Bein_Sports_Haberler.m3u ]; then
+            echo "❌ Bein_Sports_Haberler.m3u oluşmadı!"
+            ls -la
+            exit 1
+          fi
+
+          echo "✅ M3U başarıyla oluşturuldu"
+          head -20 Bein_Sports_Haberler.m3u
+
+      - name: 📤 GitHub'a gönder
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-          git add stream_url.txt Bein_Sports_Haberler.m3u cache || true
+          git add Bein_Sports_Haberler.m3u
 
           git diff --cached --quiet || git commit -m "🔄 Otomatik güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
+
           git push
