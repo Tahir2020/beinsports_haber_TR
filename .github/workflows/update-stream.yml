@@ -48,27 +48,27 @@ jobs:
 
           echo "✅ Cookies yüklendi"
 
-      - name: 🎬 M3U oluştur
+      - name: 🎬 M3U8 oluştur
         run: |
           python update_stream.py
 
-      - name: ✅ M3U kontrol et
+      - name: ✅ M3U8 kontrol et
         run: |
-          if [ ! -s Bein_Sports_Haberler.m3u ]; then
-            echo "❌ Bein_Sports_Haberler.m3u oluşmadı!"
+          if [ ! -s Bein_Sports_Haberler.m3u8 ]; then
+            echo "❌ Bein_Sports_Haberler.m3u8 oluşmadı!"
             ls -la
             exit 1
           fi
 
-          echo "✅ M3U başarıyla oluşturuldu"
-          head -20 Bein_Sports_Haberler.m3u
+          echo "✅ M3U8 başarıyla oluşturuldu"
+          cat Bein_Sports_Haberler.m3u8
 
       - name: 📤 GitHub'a gönder
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
 
-          git add Bein_Sports_Haberler.m3u
+          git add Bein_Sports_Haberler.m3u8
 
           git diff --cached --quiet || git commit -m "🔄 Otomatik güncelleme: $(date '+%Y-%m-%d %H:%M:%S')"
 
