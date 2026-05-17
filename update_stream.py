@@ -14,15 +14,12 @@ def load_config():
         return {
             "youtube_url": "https://www.youtube.com/watch?v=i7UpPgxfZZ8",
             "quality": "best[height<=1080][fps<=50]/best",
-            "m3u_file": "Bein_Sports_Haberler.m3u",
+            "m3u8_file": "Bein_Sports_Haberler.m3u8",
             "channel_name": "beIN Sports Haber",
-            "channel_logo": "https://www.tvlogolar.xyz/europa/turkey/beinsportshaber.png",
-            "group_title": "Bein Sports Haber"
         }
 
 
 def get_stream_url(youtube_url, quality):
-
     cmd = [
         'yt-dlp',
         '-g',
@@ -63,21 +60,21 @@ def get_stream_url(youtube_url, quality):
         return None
 
 
-def create_m3u(stream_url, config):
-
+def create_m3u8(stream_url, config):
+    # Sade M3U8 formatı
     m3u_content = f"""#EXTM3U
-#EXTINF:-1 tvg-id="beinsports.tr" tvg-name="{config['channel_name']}" tvg-logo="{config['channel_logo']}" group-title="{config['group_title']}",{config['channel_name']}
+#EXT-X-VERSION:3
+#EXT-X-STREAM-INF:BANDWIDTH=1280000,RESOLUTION=1280x720
 {stream_url}
 """
 
-    with open(config['m3u_file'], 'w', encoding='utf-8') as f:
+    with open(config['m3u8_file'], 'w', encoding='utf-8') as f:
         f.write(m3u_content)
 
-    print(f"✅ {config['m3u_file']} oluşturuldu")
+    print(f"✅ {config['m3u8_file']} oluşturuldu")
 
 
 def main():
-
     print("=" * 50)
     print("🎬 beIN Sports Haber Güncelleyici")
     print("=" * 50)
@@ -93,7 +90,7 @@ def main():
         print("❌ Stream URL alınamadı")
         sys.exit(1)
 
-    create_m3u(stream_url, config)
+    create_m3u8(stream_url, config)
 
     print("✅ İşlem tamamlandı")
 
