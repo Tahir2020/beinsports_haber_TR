@@ -12,7 +12,7 @@ def load_config():
             return json.load(f)
     except:
         return {
-            "youtube_url": "https://www.youtube.com/watch?v=i7UpPgxfZZ8",
+            "youtube_url": "https://www.youtube.com/@beINSPORTSTurkiye/live",
             "quality": "best[height<=1080][fps<=50]/best",
             "m3u8_file": "Bein_Sports_Haberler.m3u8",
             "channel_name": "beIN Sports Haber",
